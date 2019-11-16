@@ -65,7 +65,7 @@ slack_client = SlackInvitationClient(WORKSPACE, TOKEN)
 
 
 @app.route("/", methods=["GET", "POST"])
-def hello():
+def index():
     if request.method == "POST":
         # anti abuse
         #global last_invite
@@ -85,7 +85,7 @@ def hello():
             abort(502)
 
         last_invite = datetime.now()
-        redirect(url_for("/"))
+        redirect(url_for("index"))
 
     else:
         return render_template("index.html")
