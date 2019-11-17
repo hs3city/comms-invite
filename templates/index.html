@@ -27,12 +27,23 @@
       <section class="contact__cta">
         <div class="container">
           <p>
-	  Podaj email na który ma zostać wysłane zaproszenie na <a href="https://hs3city.slack.com">hs3city.slack.com</a>
+	  Podaj email na który ma zostać wysłane zaproszenie na&nbsp;<a href="https://hs3city.slack.com">hs3city.slack.com</a>
           </p>
           <form name="contact" method="POST"><input type="hidden" name="form-name" value="contact">
             <p>
               <input type="text" name="email" placeholder="email">
             </p>
+	    <div>
+		{% for item in slack_channels %}
+		<span class="badge badge-pill badge-primary">
+		<input type="checkbox" name="channels" value="{{ item.id }}"
+		{% if item.is_general %}checked{% endif %}
+		>
+		{{ item.name }}
+		<span class="badge badge-light">{{ item.num_members }}</span>
+		</span>
+		{% endfor %}
+	    </div>
             <p>
 	      <button type="”submit”">wyślij zaproszenie na slacka</button>
             </p>

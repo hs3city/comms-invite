@@ -41,14 +41,29 @@ class SlackInvitationClient(object):
     def base_url(self):
         return self.BASE_URL.format(self.team)
 
-    def invite(self, email, active=True):
+    def invite(self, email, channels=None, active=True):
         endpoint = urljoin(self.base_url, self.ENDPOINT)
+        data = {"email": email, "token": self.token, "set_active": active}
+        if channels:
+            data["channel_ids"] = ",".join(channels)
         r = requests.post(
-            endpoint, data={"email": email, "token": self.token, "set_active": active}
+            endpoint, data=data
         )
         response_object = r.json()
         if r.status_code == 200 and response_object["ok"]:
             return True
+        else:
+            raise SlackInvitationException(response_object["error"])
+
+    def get_channels(self):
+        endpoint = urljoin(self.base_url, "/api/channels.list")
+        r = requests.post(
+            endpoint, data={"token": self.token, "exclude_archived": True, "exclude_members": True}
+        )
+        response_object = r.json()
+        if r.status_code == 200 and response_object["ok"]:
+            channels = filter(lambda c: not c["is_private"], response_object["channels"])
+            return channels
         else:
             raise SlackInvitationException(response_object["error"])
 
@@ -73,13 +88,12 @@ def index():
         #if seconds_elapsed < MIN_SECONDS:
         #    app.logger.error("Invite sent while locked, %i seconds elapsed from %i", seconds_elapsed, MIN_SECONDS)
         #    abort(423)
-
         if not email_re.match(request.form["email"]):
             abort(400)
 
         try:
             app.logger.info("Inviting %s from %s to workspace", request.form["email"], requester_ip())
-            slack_client.invite(request.form["email"])
+            slack_client.invite(request.form["email"], request.form.getlist("channels"))
         except SlackInvitationException as exc:
             app.logger.error(exc)
             abort(502)
@@ -88,4 +102,9 @@ def index():
         redirect(url_for("index"))
 
     else:
-        return render_template("index.html")
+        try:
+            channels = slack_client.get_channels()
+            channels = sorted(channels, key=lambda c: c["num_members"], reverse=True)[:10]
+        except SlackInvitationException:
+            channels = None
+        return render_template("index.html", slack_channels=channels)
